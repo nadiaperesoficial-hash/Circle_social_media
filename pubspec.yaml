@@ -1,35 +1,32 @@
-name: social_media
-description: "A new Flutter project."
+name: circle
+description: "Circle - Social Network"
 publish_to: "none"
-version: 0.1.0
+version: 1.0.0+1
 
 environment:
   sdk: ^3.7.2
 
 dependencies:
-  build_runner: ^2.4.15
   flutter:
     sdk: flutter
   flutter_dotenv: ^5.2.1
-  image_picker: ^1.1.2
   supabase_flutter: ^2.9.0
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
+  timeago: ^3.7.0
+  uuid: ^4.5.1
+  http: ^1.2.2
+  flutter_link_previewer: ^3.2.2
+  giphy_get: ^4.0.0
+  share_plus: ^10.0.0
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  flutter_launcher_icons: "^0.14.3"
-  test: ^1.25.15
-  mockito: ^5.4.6
 
 flutter:
   uses-material-design: true
-
   assets:
     - .env
-
-flutter_icons:
-  android: true
-  ios: true
-  remove_alpha_ios: true
-  image_path: "assets/icons/logo.png"
