@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -27,6 +28,9 @@ class PostListTile extends StatefulWidget {
 
 class _PostListTileState extends State<PostListTile> {
   final SupabaseClient supabase = Supabase.instance.client;
+
+  static const cyan = Color(0xFF00E5FF);
+  static const teal = Color(0xFF00B4B4);
 
   bool isLiked = false;
   int likesCount = 0;
@@ -105,7 +109,6 @@ class _PostListTileState extends State<PostListTile> {
   Future<void> _toggleLike() async {
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return;
-
     if (isLiked) {
       await supabase
           .from('likes')
@@ -118,7 +121,6 @@ class _PostListTileState extends State<PostListTile> {
         'user_id': userId,
       });
     }
-
     await _loadLikesCount();
     await _checkIfLiked();
   }
@@ -155,91 +157,139 @@ class _PostListTileState extends State<PostListTile> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: Text(
-                authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-            title: Text(
-              authorName.isNotEmpty ? authorName : widget.subTitle,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(_formatDate(widget.postedAt)),
-            trailing: const Icon(Icons.more_horiz),
-          ),
-
-          if (widget.title.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Text(widget.title, style: const TextStyle(fontSize: 15)),
-            ),
-
-          if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  widget.imageUrl!,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(
-                    height: 100,
-                    child: Center(child: Icon(Icons.broken_image)),
-                  ),
-                ),
-              ),
-            ),
-
-          const Divider(height: 1),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withAlpha(30), width: 1),
+        color: Colors.white.withAlpha(10),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextButton.icon(
-                onPressed: _toggleLike,
-                icon: Icon(
-                  isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-                  size: 18,
-                  color: isLiked
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey,
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: teal, width: 2),
+                      ),
+                      child: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: const Color(0xFF0D1117),
+                        child: Text(
+                          authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',
+                          style: const TextStyle(color: cyan, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            authorName.isNotEmpty ? authorName : widget.subTitle,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            _formatDate(widget.postedAt),
+                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.more_horiz, color: Colors.grey[500]),
+                  ],
                 ),
-                label: Text(
-                  'Curtir${likesCount > 0 ? ' ($likesCount)' : ''}',
-                  style: TextStyle(
-                    color: isLiked
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey,
+              ),
+
+              // Texto
+              if (widget.title.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  child: Text(
+                    widget.title,
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
                   ),
                 ),
-              ),
-              TextButton.icon(
-                onPressed: _showCommentsBottomSheet,
-                icon: const Icon(Icons.comment_outlined, size: 18, color: Colors.grey),
-                label: Text(
-                  'Comentar${commentsCount > 0 ? ' ($commentsCount)' : ''}',
-                  style: const TextStyle(color: Colors.grey),
+
+              // Imagem
+              if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Image.network(
+                    widget.imageUrl!,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox(
+                      height: 100,
+                      child: Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                    ),
+                  ),
                 ),
-              ),
-              TextButton.icon(
-                onPressed: _share,
-                icon: const Icon(Icons.share_outlined, size: 18, color: Colors.grey),
-                label: const Text('Compartilhar', style: TextStyle(color: Colors.grey)),
+
+              // Ações
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+                child: Row(
+                  children: [
+                    _actionButton(
+                      icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                      label: likesCount > 0 ? '$likesCount' : 'Curtir',
+                      color: isLiked ? Colors.red[400]! : Colors.grey[400]!,
+                      onTap: _toggleLike,
+                    ),
+                    _actionButton(
+                      icon: Icons.chat_bubble_outline,
+                      label: commentsCount > 0 ? '$commentsCount' : 'Comentar',
+                      color: Colors.grey[400]!,
+                      onTap: _showCommentsBottomSheet,
+                    ),
+                    _actionButton(
+                      icon: Icons.share_outlined,
+                      label: 'Compartilhar',
+                      color: Colors.grey[400]!,
+                      onTap: _share,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(color: color, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }
