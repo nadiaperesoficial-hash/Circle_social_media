@@ -64,7 +64,7 @@ class _PostListTileState extends State<PostListTile> {
     ]);
   }
 
-  Future2<void> _loadAuthorName() async {
+  Future<void> _loadAuthorName() async {
     try {
       final response = await supabase
           .from('profiles')
