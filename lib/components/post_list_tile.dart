@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_link_previewer/flutter_link_previewer.dart';
 import 'comments_bottom_sheet.dart';
 
 class PostListTile extends StatefulWidget {
@@ -31,17 +32,29 @@ class _PostListTileState extends State<PostListTile> {
 
   static const cyan = Color(0xFF00E5FF);
   static const teal = Color(0xFF00B4B4);
+  static const cardColor = Color(0xFF0D1117);
 
   bool isLiked = false;
   int likesCount = 0;
   int commentsCount = 0;
   List<Map<String, dynamic>> comments = [];
   String authorName = '';
+  String? _extractedUrl;
 
   @override
   void initState() {
     super.initState();
     _loadPostData();
+    _extractedUrl = _extractUrl(widget.title);
+  }
+
+  String? _extractUrl(String text) {
+    final urlRegex = RegExp(
+      r'https?://[^\s]+',
+      caseSensitive: false,
+    );
+    final match = urlRegex.firstMatch(text);
+    return match?.group(0);
   }
 
   Future<void> _loadPostData() async {
@@ -183,7 +196,7 @@ class _PostListTileState extends State<PostListTile> {
                       ),
                       child: CircleAvatar(
                         radius: 20,
-                        backgroundColor: const Color(0xFF0D1117),
+                        backgroundColor: cardColor,
                         child: Text(
                           authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',
                           style: const TextStyle(color: cyan, fontWeight: FontWeight.bold),
@@ -215,13 +228,39 @@ class _PostListTileState extends State<PostListTile> {
                 ),
               ),
 
-              // Texto
+              // Texto do post
               if (widget.title.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   child: Text(
                     widget.title,
                     style: const TextStyle(color: Colors.white, fontSize: 15),
+                  ),
+                ),
+
+              // Preview de link
+              if (_extractedUrl != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: LinkPreview(
+                      enableAnimation: true,
+                      onPreviewDataFetched: (_) {},
+                      previewData: null,
+                      text: _extractedUrl!,
+                      width: MediaQuery.of(context).size.width - 56,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      linkStyle: const TextStyle(color: cyan, fontSize: 14),
+                      metadataTextStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
+                      metadataTitleStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      textWidget: const SizedBox.shrink(),
+                    ),
                   ),
                 ),
 
