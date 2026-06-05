@@ -9,6 +9,7 @@ import '../components/post_list_tile.dart';
 import '../components/textfield.dart';
 import 'profile_page.dart';
 import 'users_page.dart';
+import 'chat_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,6 +24,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = [
     const FeedPage(),
     const SearchPage(),
+    const ChatListPage(),
     const NotificationsPage(),
     const ProfilePage(),
   ];
@@ -40,6 +42,7 @@ class _HomePageState extends State<HomePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
           BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), label: 'Notificações'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
         ],
