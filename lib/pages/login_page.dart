@@ -1,27 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:social_media/pages/forgot_pass_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:social_media/pages/forgot_pass_screen.dart';
+import 'package:social_media/pages/register_page.dart';
 import '../components/button.dart';
 import '../components/textfield.dart';
 import '../helper/helper_functions.dart';
 
 class LoginPage extends StatefulWidget {
-  final void Function()? onTap;
-
-  const LoginPage({super.key, required this.onTap});
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // text controllers
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  // login function
   void login() async {
-    // show loading circle
     showDialog(
       context: context,
       builder: (context) => const Center(child: CircularProgressIndicator()),
@@ -34,13 +30,11 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.user == null) {
-        throw Exception("Login failed. Please check your credentials.");
+        throw Exception("Login falhou. Verifique suas credenciais.");
       }
 
-      // pop loading circle
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      // pop loading circle
       if (mounted) Navigator.pop(context);
       if (mounted) displayMessageToUser(e.toString(), context);
     }
@@ -53,102 +47,99 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(25.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // logo
-                    Icon(
-                      Icons.person_rounded,
-                      size: 80,
-                      color: Theme.of(context).colorScheme.inversePrimary,
+            child: Padding(
+              padding: const EdgeInsets.all(25.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+
+                  Icon(
+                    Icons.circle,
+                    size: 80,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  const Text(
+                    "Circle",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
 
-                    const SizedBox(height: 25),
+                  const SizedBox(height: 50),
 
-                    // app name
-                    const Text(
-                      "A I T O X R  U S E R",
-                      style: TextStyle(fontSize: 20),
-                    ),
+                  MyTextfield(
+                    hintText: "Email",
+                    obscureText: false,
+                    controller: emailController,
+                  ),
 
-                    const SizedBox(height: 50),
+                  const SizedBox(height: 10),
 
-                    // email textfield
-                    MyTextfield(
-                      hintText: "Email",
-                      obscureText: false,
-                      controller: emailController,
-                    ),
+                  MyTextfield(
+                    hintText: "Senha",
+                    obscureText: true,
+                    controller: passwordController,
+                  ),
 
-                    const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                    // password textfield
-                    MyTextfield(
-                      hintText: "Password",
-                      obscureText: true,
-                      controller: passwordController,
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => const ForgotPasswordPage(),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            "Forgot Password?",
-                            style: TextStyle(
-                              color:
-                                  Theme.of(context).colorScheme.inversePrimary,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ForgotPasswordPage(),
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 25),
-
-                    // sign in button
-                    MyButton(text: "LogIn", onTap: login),
-
-                    const SizedBox(height: 25),
-
-                    // don't have an account? Register here
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Don't have an account?",
+                          );
+                        },
+                        child: Text(
+                          "Esqueceu a senha?",
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.inversePrimary,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
-                        const SizedBox(width: 5),
-                        GestureDetector(
-                          onTap: widget.onTap,
-                          child: const Text(
-                            "Register Here",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
 
-                    const SizedBox(height: 50),
-                  ],
-                ),
+                  const SizedBox(height: 25),
+
+                  MyButton(text: "Entrar", onTap: login),
+
+                  const SizedBox(height: 25),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Não tem conta?"),
+                      const SizedBox(width: 5),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Cadastre-se",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 50),
+                ],
               ),
             ),
           ),
