@@ -1,11 +1,12 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 import 'dart:io';
+import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../components/drawer.dart';
 import '../components/post_list_tile.dart';
-import '../components/post_button.dart';
 import '../components/textfield.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,118 +17,71 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // text controller
   final TextEditingController newPostController = TextEditingController();
-
-  // image picker
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
   bool _isUploading = false;
 
-  // pick image from gallery
   Future<void> _pickImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1080,
-        maxHeight: 1080,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
-      }
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1080,
+      imageQuality: 85,
+    );
+    if (image != null) {
+      setState(() => _selectedImage = File(image.path));
     }
   }
 
-  // remove selected image
-  void _removeImage() {
-    setState(() {
-      _selectedImage = null;
-    });
-  }
+  Future<String?> _uploadToCloudinary(File imageFile) async {
+    final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME']!;
+    final uploadPreset = dotenv.env['CLOUDINARY_UPLOAD_PRESET']!;
 
-  // upload image to Supabase Storage
-  Future<String?> _uploadImage(File imageFile) async {
-    try {
-      final bytes = await imageFile.readAsBytes();
-      final fileName = 'post_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final uri = Uri.parse(
+      'https://api.cloudinary.com/v1_1/$cloudName/image/upload',
+    );
 
-      await Supabase.instance.client.storage
-          .from('post-images')
-          .uploadBinary(fileName, bytes);
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['upload_preset'] = uploadPreset
+      ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
 
-      final imageUrl = Supabase.instance.client.storage
-          .from('post-images')
-          .getPublicUrl(fileName);
-
-      return imageUrl;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error uploading image: $e');
-      }
-      return null;
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final data = json.decode(await response.stream.bytesToString());
+      return data['secure_url'];
     }
+    return null;
   }
 
-  // post message with optional image
   void postMessage() async {
-    if (newPostController.text.isEmpty && _selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add a message or image')),
-      );
-      return;
-    }
+    if (newPostController.text.isEmpty && _selectedImage == null) return;
 
-    setState(() {
-      _isUploading = true;
-    });
+    setState(() => _isUploading = true);
 
     try {
+      final userId = Supabase.instance.client.auth.currentUser!.id;
       String? imageUrl;
 
-      // Upload image if selected
       if (_selectedImage != null) {
-        imageUrl = await _uploadImage(_selectedImage!);
+        imageUrl = await _uploadToCloudinary(_selectedImage!);
       }
 
-      // Insert post into database
       await Supabase.instance.client.from('posts').insert({
-        'PostMessage':
-            newPostController.text.isEmpty ? null : newPostController.text,
-        'UserEmail': Supabase.instance.client.auth.currentUser?.email,
-        'ImageUrl': imageUrl,
+        'user_id': userId,
+        'content': newPostController.text.isEmpty ? null : newPostController.text,
+        'image_url': imageUrl,
       });
 
-      // Clear form
       newPostController.clear();
-      setState(() {
-        _selectedImage = null;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Post created successfully!')),
-        );
-      }
+      setState(() => _selectedImage = null);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error creating post: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e')),
+        );
       }
     } finally {
-      setState(() {
-        _isUploading = false;
-      });
+      setState(() => _isUploading = false);
     }
   }
 
@@ -136,204 +90,121 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text("T H E W A L L"),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text("Circle"),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       drawer: const MyDrawer(),
       body: Column(
         children: [
-          // POST CREATION SECTION
           Padding(
-            padding: const EdgeInsets.all(25.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // Image preview if selected
                 if (_selectedImage != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 15),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withAlpha(
-                          77,
-                        ), // 77 is approximately 30% opacity
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          _selectedImage!,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                    ),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: ColorFiltered(
-                            colorFilter: const ColorFilter.matrix(<double>[
-                              0.2126,
-                              0.7152,
-                              0.0722,
-                              0,
-                              0,
-                              0.2126,
-                              0.7152,
-                              0.0722,
-                              0,
-                              0,
-                              0.2126,
-                              0.7152,
-                              0.0722,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              1,
-                              0,
-                            ]),
-                            child: Image.file(
-                              _selectedImage!,
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedImage = null),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
                             ),
+                            child: const Icon(Icons.close, color: Colors.white, size: 20),
                           ),
                         ),
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: GestureDetector(
-                            onTap: _removeImage,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withAlpha(153),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-
-                // Text input and buttons row
+                const SizedBox(height: 10),
                 Row(
                   children: [
-                    // Camera button
                     GestureDetector(
                       onTap: _pickImage,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary
-                              .withAlpha(25), // 25 is approximately 10% opacity
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primary.withAlpha(
-                              77,
-                            ), // 77 is approximately 30% opacity
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.camera_alt_outlined,
-                          color: Theme.of(context).colorScheme.inversePrimary,
-                          size: 24,
-                        ),
+                      child: Icon(
+                        Icons.photo_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 28,
                       ),
                     ),
-
                     const SizedBox(width: 10),
-
-                    // textfield
                     Expanded(
                       child: MyTextfield(
-                        hintText: "Say something",
+                        hintText: "No que você está pensando?",
                         obscureText: false,
                         controller: newPostController,
                       ),
                     ),
-
                     const SizedBox(width: 10),
-
-                    // post button
                     _isUploading
-                        ? Container(
-                          padding: const EdgeInsets.all(12),
-                          child: const SizedBox(
+                        ? const SizedBox(
                             width: 24,
                             height: 24,
                             child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : GestureDetector(
+                            onTap: postMessage,
+                            child: Icon(
+                              Icons.send,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
-                        )
-                        : PostButton(onTap: postMessage),
                   ],
                 ),
               ],
             ),
           ),
 
-          // POSTS
+          const Divider(height: 1),
+
           StreamBuilder<List<Map<String, dynamic>>>(
             stream: Supabase.instance.client
                 .from('posts')
-                .stream(primaryKey: ['id']),
+                .stream(primaryKey: ['id'])
+                .order('created_at', ascending: false),
             builder: (context, snapshot) {
-              // show loading circle
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-
-              // handle errors
               if (snapshot.hasError) {
-                return Center(
-                  child: Text(
-                    "Error: ${snapshot.error}",
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                );
+                return Center(child: Text("Erro: ${snapshot.error}"));
               }
-
-              // get all posts
               final posts = snapshot.data;
-
-              // no data?
               if (posts == null || posts.isEmpty) {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(25.0),
-                    child: Text("No Posts.. Post something!"),
+                    child: Text("Nenhum post ainda. Seja o primeiro!"),
                   ),
                 );
               }
-
-              // return as a list
               return Expanded(
                 child: ListView.builder(
                   itemCount: posts.length,
                   itemBuilder: (context, index) {
-                    // get each individual post
                     final post = posts[index];
-
-                    // get data from each post
-                    String message = post['PostMessage'] ?? '';
-                    String userEmail = post['UserEmail'] ?? 'Unknown';
-                    String postedAt = post['created_at'] ?? 'Unknown';
-                    int postId = post['id'] ?? 0;
-                    String? imageUrl = post['ImageUrl'];
-
-                    // return as a list tile
                     return PostListTile(
-                      title: message,
-                      subTitle: userEmail,
-                      postedAt: postedAt,
-                      postId: postId.toString(),
-                      authorId: userEmail,
-                      imageUrl: imageUrl,
+                      title: post['content'] ?? '',
+                      subTitle: post['user_id'] ?? '',
+                      postedAt: post['created_at'] ?? '',
+                      postId: post['id'].toString(),
+                      authorId: post['user_id'] ?? '',
+                      imageUrl: post['image_url'],
                     );
                   },
                 ),
