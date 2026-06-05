@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:social_media/pages/forgot_pass_screen.dart';
-import 'package:social_media/pages/register_page.dart';
+import 'forgot_pass_screen.dart';
+import 'register_page.dart';
 import '../components/button.dart';
 import '../components/textfield.dart';
 import '../helper/helper_functions.dart';
