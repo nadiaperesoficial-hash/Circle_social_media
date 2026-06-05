@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_link_previewer/flutter_link_previewer.dart';
-import 'package:flutter_chat_types/flutter_chat_types.dart' show PreviewData;
 import 'comments_bottom_sheet.dart';
 
 class PostListTile extends StatefulWidget {
@@ -183,7 +182,6 @@ class _PostListTileState extends State<PostListTile> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                 child: Row(
@@ -227,7 +225,6 @@ class _PostListTileState extends State<PostListTile> {
                 ),
               ),
 
-              // Texto
               if (widget.title.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -237,7 +234,6 @@ class _PostListTileState extends State<PostListTile> {
                   ),
                 ),
 
-              // Preview de link
               if (_extractedUrl != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -257,7 +253,6 @@ class _PostListTileState extends State<PostListTile> {
                         previewData: _previewData,
                         text: _extractedUrl!,
                         width: MediaQuery.of(context).size.width - 56,
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
                         linkStyle: const TextStyle(color: cyan, fontSize: 13),
                         metadataTextStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
                         metadataTitleStyle: const TextStyle(
@@ -272,7 +267,6 @@ class _PostListTileState extends State<PostListTile> {
                   ),
                 ),
 
-              // Imagem
               if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -287,7 +281,6 @@ class _PostListTileState extends State<PostListTile> {
                   ),
                 ),
 
-              // Ações
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
                 child: Row(
