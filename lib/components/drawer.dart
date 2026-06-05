@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../pages/profile_page.dart';
+import '../pages/users_page.dart';
 
 class MyDrawer extends StatelessWidget {
   const MyDrawer({super.key});
 
-  // logout method
   void logout() {
     Supabase.instance.client.auth.signOut();
   }
@@ -18,113 +19,80 @@ class MyDrawer extends StatelessWidget {
         children: [
           Column(
             children: [
-              // Drawer header (icon with customized theme)
               Theme(
                 data: Theme.of(context).copyWith(
-                  dividerTheme: const DividerThemeData(
-                    color: Colors.transparent,
-                  ),
+                  dividerTheme: const DividerThemeData(color: Colors.transparent),
                 ),
                 child: DrawerHeader(
                   child: Container(
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.rectangle,
                       borderRadius: BorderRadius.circular(15),
                     ),
-
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            "A I T O X R",
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          Text(
-                            "@ S O C I A L",
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ],
+                    child: const Center(
+                      child: Text(
+                        "Circle",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 10),
 
-              // home tile
               Padding(
                 padding: const EdgeInsets.only(left: 25.0),
                 child: ListTile(
-                  leading: Icon(
-                    Icons.home_rounded,
-                    color: Theme.of(context).colorScheme.inversePrimary,
-                  ),
-                  title: const Text("H O M E"),
+                  leading: const Icon(Icons.home_rounded),
+                  title: const Text("Início"),
+                  onTap: () => Navigator.pop(context),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.only(left: 25.0),
+                child: ListTile(
+                  leading: const Icon(Icons.person_rounded),
+                  title: const Text("Perfil"),
                   onTap: () {
-                    // this is already the home screen so just pop drawer
                     Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ProfilePage()),
+                    );
                   },
                 ),
               ),
 
-              // profile tile
               Padding(
                 padding: const EdgeInsets.only(left: 25.0),
                 child: ListTile(
-                  leading: Icon(
-                    Icons.person_rounded,
-                    color: Theme.of(context).colorScheme.inversePrimary,
-                  ),
-                  title: const Text("P R O F I L E"),
+                  leading: const Icon(Icons.group_rounded),
+                  title: const Text("Amigos"),
                   onTap: () {
-                    // pop drawer
                     Navigator.pop(context);
-
-                    // navigate to profile page
-                    Navigator.pushNamed(context, '/profile_page');
-                  },
-                ),
-              ),
-
-              // users tile
-              Padding(
-                padding: const EdgeInsets.only(left: 25.0),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.group_rounded,
-                    color: Theme.of(context).colorScheme.inversePrimary,
-                  ),
-                  title: const Text("U S E R S"),
-                  onTap: () {
-                    // pop drawer
-                    Navigator.pop(context);
-
-                    // navigate to users page
-                    Navigator.pushNamed(context, '/users_page');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const UsersPage()),
+                    );
                   },
                 ),
               ),
             ],
           ),
 
-          // logout tile
           Padding(
             padding: const EdgeInsets.only(left: 25.0, bottom: 25),
             child: ListTile(
-              leading: Icon(
-                Icons.logout_rounded,
-                color: Theme.of(context).colorScheme.inversePrimary,
-              ),
-              title: const Text("L O G O U T"),
+              leading: const Icon(Icons.logout_rounded),
+              title: const Text("Sair"),
               onTap: () {
-                // pop drawer
                 Navigator.pop(context);
-
-                // logout
                 logout();
               },
             ),
