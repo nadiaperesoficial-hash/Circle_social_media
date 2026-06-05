@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:io';
+import 'dart:convert';
 import '../components/post_list_tile.dart';
 import 'users_page.dart';
 
-// Hexagon clipper
 class HexagonClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
-    final path = Path();
     final w = size.width;
     final h = size.height;
+    final path = Path();
     path.moveTo(w * 0.5, 0);
     path.lineTo(w, h * 0.25);
     path.lineTo(w, h * 0.75);
@@ -24,6 +28,33 @@ class HexagonClipper extends CustomClipper<Path> {
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
+class HexagonPainter extends CustomPainter {
+  final Color color;
+  HexagonPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    final w = size.width;
+    final h = size.height;
+    final path = Path();
+    path.moveTo(w * 0.5, 0);
+    path.lineTo(w, h * 0.25);
+    path.lineTo(w, h * 0.75);
+    path.lineTo(w * 0.5, h);
+    path.lineTo(0, h * 0.75);
+    path.lineTo(0, h * 0.25);
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -33,6 +64,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final supabase = Supabase.instance.client;
+  final ImagePicker _picker = ImagePicker();
   Map<String, dynamic>? profile;
   List<Map<String, dynamic>> posts = [];
   List<Map<String, dynamic>> friends = [];
@@ -52,27 +84,18 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _loadAll() async {
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return;
-
     try {
       final profileData = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', userId)
-          .maybeSingle();
-
+          .from('profiles').select().eq('id', userId).maybeSingle();
       final postsData = await supabase
-          .from('posts')
-          .select()
-          .eq('user_id', userId)
+          .from('posts').select().eq('user_id', userId)
           .order('created_at', ascending: false);
-
       final friendsData = await supabase
           .from('friendships')
           .select('requester_id, receiver_id, profiles!friendships_receiver_id_fkey(id, username, avatar_url)')
           .eq('requester_id', userId)
           .eq('status', 'accepted')
           .limit(6);
-
       if (mounted) {
         setState(() {
           profile = profileData;
@@ -84,6 +107,47 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  Future<String?> _uploadToCloudinary(File imageFile) async {
+    final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME']!;
+    final uploadPreset = dotenv.env['CLOUDINARY_UPLOAD_PRESET']!;
+    final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['upload_preset'] = uploadPreset
+      ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final data = json.decode(await response.stream.bytesToString());
+      return data['secure_url'];
+    }
+    return null;
+  }
+
+  Future<void> _changeAvatar() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (image == null) return;
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final url = await _uploadToCloudinary(File(image.path));
+    if (url == null) return;
+
+    await supabase.from('profiles').update({'avatar_url': url}).eq('id', userId);
+    await _loadAll();
+  }
+
+  Future<void> _changeCover() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (image == null) return;
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final url = await _uploadToCloudinary(File(image.path));
+    if (url == null) return;
+
+    await supabase.from('profiles').update({'cover_url': url}).eq('id', userId);
+    await _loadAll();
   }
 
   Future<void> _deletePost(String postId) async {
@@ -102,36 +166,73 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildHexAvatar() {
-    return Container(
-      width: 96,
-      height: 96,
-      decoration: BoxDecoration(
-        shape: BoxShape.rectangle,
-        boxShadow: [
-          BoxShadow(
-            color: cyan.withAlpha(180),
-            blurRadius: 20,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: ClipPath(
-        clipper: HexagonClipper(),
-        child: profile?['avatar_url'] != null
-            ? Image.network(profile!['avatar_url'], fit: BoxFit.cover)
-            : Container(
-                color: cardColor,
-                child: Center(
-                  child: Text(
-                    (profile?['username'] ?? 'U')[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: cyan,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                    ),
+    return GestureDetector(
+      onTap: _changeAvatar,
+      child: SizedBox(
+        width: 100,
+        height: 100,
+        child: Stack(
+          children: [
+            // Glow
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: cyan.withAlpha(150),
+                    blurRadius: 24,
+                    spreadRadius: 4,
                   ),
-                ),
+                ],
               ),
+            ),
+            // Hexagon image
+            ClipPath(
+              clipper: HexagonClipper(),
+              child: profile?['avatar_url'] != null
+                  ? Image.network(
+                      profile!['avatar_url'],
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: 100,
+                      height: 100,
+                      color: cardColor,
+                      child: Center(
+                        child: Text(
+                          (profile?['username'] ?? 'U')[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: cyan,
+                            fontSize: 38,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+            // Hexagon border
+            CustomPaint(
+              size: const Size(100, 100),
+              painter: HexagonPainter(cyan),
+            ),
+            // Camera icon
+            Positioned(
+              bottom: 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: cyan,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.camera_alt, size: 12, color: Colors.black),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -139,39 +240,48 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildHeader() {
     return Column(
       children: [
-        // Capa
         Stack(
           alignment: Alignment.bottomCenter,
+          clipBehavior: Clip.none,
           children: [
-            Container(
-              height: 180,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                image: profile?['cover_url'] != null
-                    ? DecorationImage(
-                        image: NetworkImage(profile!['cover_url']),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-                gradient: profile?['cover_url'] == null
-                    ? const LinearGradient(
-                        colors: [Color(0xFF0D1B2A), Color(0xFF000000)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+            // Capa clicável
+            GestureDetector(
+              onTap: _changeCover,
+              child: Container(
+                height: 180,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  image: profile?['cover_url'] != null
+                      ? DecorationImage(
+                          image: NetworkImage(profile!['cover_url']),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                  gradient: profile?['cover_url'] == null
+                      ? const LinearGradient(
+                          colors: [Color(0xFF0D1B2A), Color(0xFF000000)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                ),
+                child: profile?['cover_url'] == null
+                    ? const Center(
+                        child: Icon(Icons.add_a_photo_outlined, color: Colors.white30, size: 32),
                       )
                     : null,
               ),
             ),
+            // Avatar sobreposto
             Positioned(
-              bottom: -48,
+              bottom: -50,
               child: _buildHexAvatar(),
             ),
           ],
         ),
 
-        const SizedBox(height: 56),
+        const SizedBox(height: 60),
 
-        // Nome
         Text(
           profile?['full_name'] ?? profile?['username'] ?? '',
           style: const TextStyle(
@@ -234,11 +344,30 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: cyan, size: 20),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(color: cyan, fontSize: 12)),
+              Text(value, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAbout() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
@@ -251,14 +380,8 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Basic Details',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                const Text('Basic Details',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
                 if (profile?['city'] != null)
                   _buildDetailRow(Icons.location_on_outlined, 'Cidade', profile!['city']),
@@ -274,7 +397,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
           const SizedBox(height: 16),
 
-          // Amigos
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -289,14 +411,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Friends',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
+                    const Text('Friends',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     GestureDetector(
                       onTap: () => Navigator.push(
                         context,
@@ -309,10 +425,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: cyan.withAlpha(100)),
                         ),
-                        child: const Text(
-                          'View All Friends >',
-                          style: TextStyle(color: cyan, fontSize: 12),
-                        ),
+                        child: const Text('View All Friends >', style: TextStyle(color: cyan, fontSize: 12)),
                       ),
                     ),
                   ],
@@ -330,12 +443,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: cyan.withAlpha(100),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
+                                  boxShadow: [BoxShadow(color: cyan.withAlpha(100), blurRadius: 8)],
                                 ),
                                 child: CircleAvatar(
                                   radius: 28,
@@ -344,10 +452,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                       ? NetworkImage(p!['avatar_url'])
                                       : null,
                                   child: p?['avatar_url'] == null
-                                      ? Text(
-                                          (p?['username'] ?? 'U')[0].toUpperCase(),
-                                          style: const TextStyle(color: cyan),
-                                        )
+                                      ? Text((p?['username'] ?? 'U')[0].toUpperCase(),
+                                          style: const TextStyle(color: cyan))
                                       : null,
                                 ),
                               ),
@@ -364,26 +470,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: cyan, size: 20),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(color: cyan, fontSize: 12)),
-              Text(value, style: const TextStyle(color: Colors.white, fontSize: 14)),
-            ],
           ),
         ],
       ),
@@ -421,6 +507,20 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: amoled,
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF0D1117),
+        currentIndex: 3,
+        selectedItemColor: cyan,
+        unselectedItemColor: Colors.grey[600],
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), label: 'Notificações'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
+        ],
+      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator(color: cyan))
           : SafeArea(
