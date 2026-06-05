@@ -161,6 +161,89 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _editDetails() async {
+    final cityController = TextEditingController(text: profile?['city'] ?? '');
+    final workController = TextEditingController(text: profile?['work'] ?? '');
+    final educationController = TextEditingController(text: profile?['education'] ?? '');
+    final ageController = TextEditingController(text: profile?['age']?.toString() ?? '');
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF0D1117),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: cyan.withAlpha(60)),
+        ),
+        title: const Text('Editar informações', style: TextStyle(color: Colors.white)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _dialogField(cityController, 'Cidade', Icons.location_on_outlined),
+              const SizedBox(height: 12),
+              _dialogField(workController, 'Profissão', Icons.work_outline),
+              const SizedBox(height: 12),
+              _dialogField(educationController, 'Faculdade', Icons.school_outlined),
+              const SizedBox(height: 12),
+              _dialogField(ageController, 'Idade', Icons.cake_outlined, isNumber: true),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          GestureDetector(
+            onTap: () async {
+              final userId = supabase.auth.currentUser?.id;
+              if (userId == null) return;
+              await supabase.from('profiles').update({
+                'city': cityController.text.isEmpty ? null : cityController.text,
+                'work': workController.text.isEmpty ? null : workController.text,
+                'education': educationController.text.isEmpty ? null : educationController.text,
+                'age': ageController.text.isEmpty ? null : int.tryParse(ageController.text),
+              }).eq('id', userId);
+              if (mounted) Navigator.pop(context);
+              await _loadAll();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: cyan,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('Salvar', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dialogField(TextEditingController controller, String hint, IconData icon, {bool isNumber = false}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cyan.withAlpha(40)),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.grey[600]),
+          prefixIcon: Icon(icon, color: cyan, size: 20),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHexAvatar() {
     return GestureDetector(
       onTap: _changeAvatar,
@@ -335,17 +418,41 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Basic Details',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Basic Details',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    GestureDetector(
+                      onTap: _editDetails,
+                      child: Row(
+                        children: const [
+                          Text('Edit', style: TextStyle(color: cyan, fontSize: 13)),
+                          SizedBox(width: 4),
+                          Icon(Icons.edit, color: cyan, size: 14),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
+                if (profile?['age'] != null)
+                  _buildDetailRow(Icons.cake_outlined, 'Idade', '${profile!['age']} anos'),
                 if (profile?['city'] != null)
                   _buildDetailRow(Icons.location_on_outlined, 'Cidade', profile!['city']),
                 if (profile?['work'] != null)
-                  _buildDetailRow(Icons.work_outline, 'Trabalho', profile!['work']),
+                  _buildDetailRow(Icons.work_outline, 'Profissão', profile!['work']),
                 if (profile?['education'] != null)
-                  _buildDetailRow(Icons.school_outlined, 'Educação', profile!['education']),
-                if (profile?['city'] == null && profile?['work'] == null && profile?['education'] == null)
-                  const Text('Nenhuma informação ainda.', style: TextStyle(color: Colors.grey)),
+                  _buildDetailRow(Icons.school_outlined, 'Faculdade', profile!['education']),
+                if (profile?['age'] == null && profile?['city'] == null &&
+                    profile?['work'] == null && profile?['education'] == null)
+                  GestureDetector(
+                    onTap: _editDetails,
+                    child: const Text(
+                      'Toque para adicionar informações',
+                      style: TextStyle(color: cyan, fontSize: 13),
+                    ),
+                  ),
               ],
             ),
           ),
