@@ -1,220 +1,185 @@
 import 'package:flutter/material.dart';
-import 'package:social_media/components/post_list_tile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../components/back_button.dart';
+import '../components/post_list_tile.dart';
 
-class ProfilePage extends StatelessWidget {
-  ProfilePage({super.key});
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
 
-  // current logged-in user
-  final user = Supabase.instance.client.auth.currentUser;
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
 
-  // future to fetch user details
-  Future<Map<String, dynamic>?> getUserDetails() async {
-    if (user?.email == null) {
-      throw Exception("User email is null");
+class _ProfilePageState extends State<ProfilePage> {
+  final supabase = Supabase.instance.client;
+  Map<String, dynamic>? profile;
+  List<Map<String, dynamic>> posts = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      final profileData = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+
+      final postsData = await supabase
+          .from('posts')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      if (mounted) {
+        setState(() {
+          profile = profileData;
+          posts = List<Map<String, dynamic>>.from(postsData);
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => isLoading = false);
     }
+  }
 
-    final response =
-        await Supabase.instance.client
-            .from('users')
-            .select()
-            .eq('email', user!.email!)
-            .maybeSingle();
-
-    if (response == null) {
-      throw Exception("User not found");
+  Future<void> _deletePost(String postId) async {
+    try {
+      await supabase.from('comments').delete().eq('post_id', postId);
+      await supabase.from('likes').delete().eq('post_id', postId);
+      await supabase.from('posts').delete().eq('id', postId);
+      await _loadProfile();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao deletar: $e')),
+        );
+      }
     }
-
-    return response;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: FutureBuilder<Map<String, dynamic>?>(
-        future: getUserDetails(),
-        builder: (context, snapshot) {
-          // loading..
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          // error
-          else if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [Text("Error: ${snapshot.error}")],
-              ),
-            );
-          }
-          // data received
-          else if (snapshot.hasData) {
-            // extract data
-            final user = snapshot.data!;
-
-            return Center(
-              child: Column(
-                children: [
-                  // back button
-                  const Padding(
-                    padding: EdgeInsets.only(top: 50.0, left: 25),
-                    child: Row(children: [MyBackButton()]),
-                  ),
-
-                  const SizedBox(height: 25),
-
-                  // profile pic
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    padding: const EdgeInsets.all(25),
-                    child: const Icon(Icons.person_rounded, size: 65),
-                  ),
-
-                  const SizedBox(height: 25),
-
-                  // username
-                  Text(
-                    user["username"],
-                    style: const TextStyle(
-                      fontSize: 25,
-                      fontWeight: FontWeight.bold,
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  expandedHeight: 200,
+                  pinned: true,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        profile?['cover_url'] != null
+                            ? Image.network(
+                                profile!['cover_url'],
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                        Positioned(
+                          bottom: 16,
+                          left: 16,
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Colors.white,
+                            backgroundImage: profile?['avatar_url'] != null
+                                ? NetworkImage(profile!['avatar_url'])
+                                : null,
+                            child: profile?['avatar_url'] == null
+                                ? Text(
+                                    (profile?['username'] ?? 'U')[0].toUpperCase(),
+                                    style: const TextStyle(fontSize: 30),
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 10),
-
-                  // email
-                  Text(
-                    user["email"],
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  Text(
-                    "M Y  P O S T S",
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.inversePrimary,
-                      fontSize: 20,
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile?['full_name'] ?? profile?['username'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (profile?['bio'] != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(profile!['bio']),
+                          ),
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        const Text(
+                          'Meus posts',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 20),
-
-                  Expanded(
-                    child: FutureBuilder<List<Map<String, dynamic>>>(
-                      future: Supabase.instance.client
-                          .from('posts')
-                          .select()
-                          .eq('UserEmail', user["email"])
-                          .order('created_at', ascending: false)
-                          .then((response) => response),
-                      builder: (context, postSnapshot) {
-                        if (postSnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        } else if (postSnapshot.hasError) {
-                          return Center(
-                            child: Text("Error: ${postSnapshot.error}"),
-                          );
-                        } else if (postSnapshot.hasData &&
-                            postSnapshot.data!.isNotEmpty) {
-                          final posts = postSnapshot.data!;
-                          return ListView.builder(
-                            itemCount: posts.length,
-                            itemBuilder: (context, index) {
-                              final post = posts[index];
-                              return Dismissible(
-                                key: Key(post["id"].toString()),
-                                direction: DismissDirection.endToStart,
-                                background: Container(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.inversePrimary.withAlpha(100),
-                                  alignment: Alignment.centerRight,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                  ),
-                                  child: const Icon(
-                                    Icons.delete,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                onDismissed: (direction) async {
-                                  try {
-                                    await Supabase.instance.client
-                                        .from('post_comments')
-                                        .delete()
-                                        .eq('post_id', post["id"]);
-
-                                    await Supabase.instance.client
-                                        .from('post_likes')
-                                        .delete()
-                                        .eq('post_id', post["id"]);
-
-                                    // Delete the post
-                                    await Supabase.instance.client
-                                        .from('posts')
-                                        .delete()
-                                        .eq('id', post["id"]);
-
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "Post deleted successfully",
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            "Error deleting post: $e",
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                child: PostListTile(
-                                  title: post["PostMessage"],
-                                  subTitle: post["UserEmail"],
-                                  postedAt: post["created_at"],
-                                  postId: post["id"].toString(),
-                                  authorId: post["UserEmail"],
-                                ),
-                              );
-                            },
-                          );
-                        } else {
-                          return const Center(child: Text("No posts found"));
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          } else {
-            return const Text("No data");
-          }
-        },
-      ),
+                posts.isEmpty
+                    ? const SliverToBoxAdapter(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text('Nenhum post ainda.'),
+                          ),
+                        ),
+                      )
+                    : SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final post = posts[index];
+                            return Dismissible(
+                              key: Key(post['id'].toString()),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                color: Colors.red,
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                child: const Icon(Icons.delete, color: Colors.white),
+                              ),
+                              onDismissed: (_) => _deletePost(post['id'].toString()),
+                              child: PostListTile(
+                                title: post['content'] ?? '',
+                                subTitle: post['user_id'] ?? '',
+                                postedAt: post['created_at'] ?? '',
+                                postId: post['id'].toString(),
+                                authorId: post['user_id'] ?? '',
+                                imageUrl: post['image_url'],
+                              ),
+                            );
+                          },
+                          childCount: posts.length,
+                        ),
+                      ),
+              ],
+            ),
     );
   }
 }
