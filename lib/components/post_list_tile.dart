@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_link_previewer/flutter_link_previewer.dart';
+import 'package:flutter_chat_types/flutter_chat_types.dart' show PreviewData;
 import 'comments_bottom_sheet.dart';
 
 class PostListTile extends StatefulWidget {
@@ -40,6 +41,7 @@ class _PostListTileState extends State<PostListTile> {
   List<Map<String, dynamic>> comments = [];
   String authorName = '';
   String? _extractedUrl;
+  PreviewData? _previewData;
 
   @override
   void initState() {
@@ -49,10 +51,7 @@ class _PostListTileState extends State<PostListTile> {
   }
 
   String? _extractUrl(String text) {
-    final urlRegex = RegExp(
-      r'https?://[^\s]+',
-      caseSensitive: false,
-    );
+    final urlRegex = RegExp(r'https?://[^\s]+', caseSensitive: false);
     final match = urlRegex.firstMatch(text);
     return match?.group(0);
   }
@@ -228,7 +227,7 @@ class _PostListTileState extends State<PostListTile> {
                 ),
               ),
 
-              // Texto do post
+              // Texto
               if (widget.title.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -242,24 +241,33 @@ class _PostListTileState extends State<PostListTile> {
               if (_extractedUrl != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: LinkPreview(
-                      enableAnimation: true,
-                      onPreviewDataFetched: (_) {},
-                      previewData: null,
-                      text: _extractedUrl!,
-                      width: MediaQuery.of(context).size.width - 56,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                      linkStyle: const TextStyle(color: cyan, fontSize: 14),
-                      metadataTextStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
-                      metadataTitleStyle: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cyan.withAlpha(40)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: LinkPreview(
+                        enableAnimation: true,
+                        onPreviewDataFetched: (data) {
+                          if (mounted) setState(() => _previewData = data);
+                        },
+                        previewData: _previewData,
+                        text: _extractedUrl!,
+                        width: MediaQuery.of(context).size.width - 56,
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        linkStyle: const TextStyle(color: cyan, fontSize: 13),
+                        metadataTextStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
+                        metadataTitleStyle: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        padding: const EdgeInsets.all(12),
+                        textWidget: const SizedBox.shrink(),
                       ),
-                      padding: const EdgeInsets.all(12),
-                      textWidget: const SizedBox.shrink(),
                     ),
                   ),
                 ),
