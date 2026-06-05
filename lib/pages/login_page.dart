@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'forgot_pass_screen.dart';
 import 'register_page.dart';
-import '../components/button.dart';
-import '../components/textfield.dart';
 import '../helper/helper_functions.dart';
 
 class LoginPage extends StatefulWidget {
@@ -17,10 +15,16 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  static const cyan = Color(0xFF00E5FF);
+  static const amoled = Color(0xFF000000);
+  static const cardColor = Color(0xFF0D1117);
+
   void login() async {
     showDialog(
       context: context,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: cyan),
+      ),
     );
 
     try {
@@ -43,108 +47,230 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: amoled,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(25.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 40),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              children: [
+                const SizedBox(height: 60),
 
-                  Icon(
-                    Icons.circle,
-                    size: 80,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  const Text(
-                    "Circle",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 50),
-
-                  MyTextfield(
-                    hintText: "Email",
-                    obscureText: false,
-                    controller: emailController,
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  MyTextfield(
-                    hintText: "Senha",
-                    obscureText: true,
-                    controller: passwordController,
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                // Logo hexagonal
+                SizedBox(
+                  width: 90,
+                  height: 90,
+                  child: Stack(
                     children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ForgotPasswordPage(),
+                      // Glow
+                      Container(
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: cyan.withAlpha(120),
+                              blurRadius: 30,
+                              spreadRadius: 8,
                             ),
-                          );
-                        },
+                          ],
+                        ),
+                      ),
+                      // Hexagon
+                      CustomPaint(
+                        size: const Size(90, 90),
+                        painter: _HexPainter(cyan),
+                      ),
+                      // Letra C
+                      const Center(
                         child: Text(
-                          "Esqueceu a senha?",
+                          'C',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
+                            color: cyan,
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ],
                   ),
+                ),
 
-                  const SizedBox(height: 25),
+                const SizedBox(height: 20),
 
-                  MyButton(text: "Entrar", onTap: login),
+                // Nome Circle com fonte cursiva
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [cyan, Color(0xFF00B4B4)],
+                  ).createShader(bounds),
+                  child: const Text(
+                    'Circle',
+                    style: TextStyle(
+                      fontSize: 48,
+                      color: Colors.white,
+                      fontFamily: 'serif',
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w300,
+                      shadows: [
+                        Shadow(color: cyan, blurRadius: 20),
+                        Shadow(color: cyan, blurRadius: 40),
+                      ],
+                    ),
+                  ),
+                ),
 
-                  const SizedBox(height: 25),
+                const SizedBox(height: 50),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Não tem conta?"),
-                      const SizedBox(width: 5),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RegisterPage(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          "Cadastre-se",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                // Email
+                _buildField(
+                  controller: emailController,
+                  hint: 'Email',
+                  obscure: false,
+                  icon: Icons.email_outlined,
+                ),
+
+                const SizedBox(height: 14),
+
+                // Senha
+                _buildField(
+                  controller: passwordController,
+                  hint: 'Senha',
+                  obscure: true,
+                  icon: Icons.lock_outline,
+                ),
+
+                const SizedBox(height: 10),
+
+                // Esqueceu senha
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                    ),
+                    child: const Text(
+                      'Esqueceu a senha?',
+                      style: TextStyle(color: cyan, fontSize: 13),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                // Botão Entrar
+                GestureDetector(
+                  onTap: login,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: cyan,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: cyan.withAlpha(120),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'Entrar',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Cadastre-se
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Não tem conta? ',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const RegisterPage()),
+                      ),
+                      child: const Text(
+                        'Cadastre-se',
+                        style: TextStyle(
+                          color: cyan,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
 
-                  const SizedBox(height: 50),
-                ],
-              ),
+                const SizedBox(height: 40),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required String hint,
+    required bool obscure,
+    required IconData icon,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D1117),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withAlpha(20)),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscure,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.grey[600]),
+          prefixIcon: Icon(icon, color: Colors.grey[600], size: 20),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+      ),
+    );
+  }
+}
+
+class _HexPainter extends CustomPainter {
+  final Color color;
+  _HexPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final w = size.width;
+    final h = size.height;
+    final path = Path();
+    path.moveTo(w * 0.5, 0);
+    path.lineTo(w, h * 0.25);
+    path.lineTo(w, h * 0.75);
+    path.lineTo(w * 0.5, h);
+    path.lineTo(0, h * 0.75);
+    path.lineTo(0, h * 0.25);
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
