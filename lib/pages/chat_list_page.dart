@@ -16,6 +16,11 @@ class _ChatListPageState extends State<ChatListPage>
   List<Map<String, dynamic>> _conversations = [];
   bool isLoading = true;
 
+  static const teal = Color(0xFF00B4B4);
+  static const cyan = Color(0xFF00E5FF);
+  static const amoled = Color(0xFF000000);
+  static const cardColor = Color(0xFF0D1117);
+
   @override
   void initState() {
     super.initState();
@@ -46,7 +51,6 @@ class _ChatListPageState extends State<ChatListPage>
           .eq('receiver_id', userId)
           .order('created_at', ascending: false);
 
-      // Junta IDs únicos de conversas
       final Map<String, Map<String, dynamic>> convMap = {};
 
       for (final m in sent) {
@@ -73,7 +77,6 @@ class _ChatListPageState extends State<ChatListPage>
         }
       }
 
-      // Busca perfis
       final List<Map<String, dynamic>> result = [];
       for (final entry in convMap.entries) {
         final profile = await supabase
@@ -99,7 +102,9 @@ class _ChatListPageState extends State<ChatListPage>
 
   Widget _buildList(List<Map<String, dynamic>> items) {
     if (items.isEmpty) {
-      return const Center(child: Text('Nenhuma conversa.'));
+      return const Center(
+        child: Text('Nenhuma conversa.', style: TextStyle(color: Colors.grey)),
+      );
     }
     return ListView.builder(
       itemCount: items.length,
@@ -108,49 +113,64 @@ class _ChatListPageState extends State<ChatListPage>
         final profile = conv['profile'];
         final isRead = conv['is_read'] ?? true;
 
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            backgroundImage: profile['avatar_url'] != null
-                ? NetworkImage(profile['avatar_url'])
-                : null,
-            child: profile['avatar_url'] == null
-                ? Text(
-                    (profile['username'] ?? 'U')[0].toUpperCase(),
-                    style: const TextStyle(color: Colors.white),
-                  )
-                : null,
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withAlpha(15)),
           ),
-          title: Text(
-            profile['username'] ?? '',
-            style: TextStyle(
-              fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+          child: ListTile(
+            leading: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: isRead ? Colors.grey.withAlpha(60) : cyan, width: 2),
+                boxShadow: isRead ? [] : [BoxShadow(color: cyan.withAlpha(80), blurRadius: 8)],
+              ),
+              child: CircleAvatar(
+                backgroundColor: const Color(0xFF1A1A2E),
+                backgroundImage: profile['avatar_url'] != null
+                    ? NetworkImage(profile['avatar_url'])
+                    : null,
+                child: profile['avatar_url'] == null
+                    ? Text(
+                        (profile['username'] ?? 'U')[0].toUpperCase(),
+                        style: const TextStyle(color: cyan, fontWeight: FontWeight.bold),
+                      )
+                    : null,
+              ),
             ),
-          ),
-          subtitle: Text(
-            conv['last_message'] ?? '',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: isRead ? Colors.grey : Colors.black87,
+            title: Text(
+              profile['username'] ?? '',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+              ),
             ),
-          ),
-          trailing: isRead
-              ? null
-              : Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    shape: BoxShape.circle,
+            subtitle: Text(
+              conv['last_message'] ?? '',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: isRead ? Colors.grey[600] : Colors.grey[300]),
+            ),
+            trailing: isRead
+                ? null
+                : Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: cyan,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: cyan.withAlpha(150), blurRadius: 6)],
+                    ),
                   ),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ChatPage(
+                  otherUserId: profile['id'],
+                  otherUsername: profile['username'] ?? '',
                 ),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ChatPage(
-                otherUserId: profile['id'],
-                otherUsername: profile['username'] ?? '',
               ),
             ),
           ),
@@ -164,15 +184,17 @@ class _ChatListPageState extends State<ChatListPage>
     final unread = _conversations.where((c) => c['is_read'] == false).toList();
 
     return Scaffold(
+      backgroundColor: amoled,
       appBar: AppBar(
-        title: const Text('Mensagens'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: teal,
+        elevation: 0,
+        title: const Text('Mensagens', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
+          indicatorColor: cyan,
+          indicatorWeight: 3,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          unselectedLabelColor: Colors.white60,
           tabs: const [
             Tab(text: 'All'),
             Tab(text: 'New'),
@@ -181,13 +203,15 @@ class _ChatListPageState extends State<ChatListPage>
         ),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: teal))
           : TabBarView(
               controller: _tabController,
               children: [
                 _buildList(_conversations),
                 _buildList(unread),
-                const Center(child: Text('Mensagens de páginas em breve')),
+                const Center(
+                  child: Text('Mensagens de páginas em breve', style: TextStyle(color: Colors.grey)),
+                ),
               ],
             ),
     );
