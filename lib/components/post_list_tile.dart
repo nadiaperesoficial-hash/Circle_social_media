@@ -40,8 +40,8 @@ class _PostListTileState extends State<PostListTile> {
   List<Map<String, dynamic>> comments = [];
   String authorName = '';
   String? _extractedUrl;
-  PreviewData? _previewData;
-
+  dynamic _previewData;
+    
   @override
   void initState() {
     super.initState();
@@ -64,7 +64,7 @@ class _PostListTileState extends State<PostListTile> {
     ]);
   }
 
-  Future<void> _loadAuthorName() async {
+  Future2<void> _loadAuthorName() async {
     try {
       final response = await supabase
           .from('profiles')
