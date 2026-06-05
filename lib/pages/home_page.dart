@@ -32,20 +32,31 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), label: 'Notificações'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D1117),
+          border: Border(top: BorderSide(color: const Color(0xFF00E5FF).withAlpha(40))),
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          currentIndex: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: const Color(0xFF00E5FF),
+          unselectedItemColor: Colors.grey[600],
+          selectedFontSize: 11,
+          unselectedFontSize: 11,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
+            BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), label: 'Notificações'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
+          ],
+        ),
       ),
     );
   }
@@ -64,6 +75,9 @@ class _FeedPageState extends State<FeedPage> {
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
   bool _isUploading = false;
+
+  static const teal = Color(0xFF00B4B4);
+  static const cyan = Color(0xFF00E5FF);
 
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(
@@ -119,13 +133,37 @@ class _FeedPageState extends State<FeedPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Circle'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: teal,
+        elevation: 0,
+        title: RichText(
+          text: const TextSpan(
+            children: [
+              TextSpan(
+                text: 'C',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1,
+                ),
+              ),
+              TextSpan(
+                text: 'ircle',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.people_outline),
+            icon: const Icon(Icons.people_outline, color: Colors.white),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const UsersPage()),
@@ -135,8 +173,10 @@ class _FeedPageState extends State<FeedPage> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
+          // Campo de post
+          Container(
+            color: const Color(0xFF0D1117),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Column(
               children: [
                 if (_selectedImage != null)
@@ -146,7 +186,7 @@ class _FeedPageState extends State<FeedPage> {
                         borderRadius: BorderRadius.circular(12),
                         child: Image.file(
                           _selectedImage!,
-                          height: 200,
+                          height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
                         ),
@@ -158,40 +198,61 @@ class _FeedPageState extends State<FeedPage> {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, color: Colors.white, size: 20),
+                            child: const Icon(Icons.close, color: Colors.white, size: 18),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 8),
                     ],
                   ),
-                const SizedBox(height: 8),
                 Row(
                   children: [
                     GestureDetector(
                       onTap: _pickImage,
-                      child: Icon(Icons.photo_outlined, color: Theme.of(context).colorScheme.primary, size: 28),
+                      child: const Icon(Icons.photo_outlined, color: teal, size: 26),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: MyTextfield(
-                        hintText: 'No que você está pensando?',
-                        obscureText: false,
-                        controller: newPostController,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(10),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.white.withAlpha(30)),
+                        ),
+                        child: TextField(
+                          controller: newPostController,
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          decoration: const InputDecoration.collapsed(
+                            hintText: 'No que você está pensando?',
+                            hintStyle: TextStyle(color: Colors.grey),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     _isUploading
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 24, height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: teal),
+                          )
                         : GestureDetector(
                             onTap: postMessage,
-                            child: Icon(Icons.send, color: Theme.of(context).colorScheme.primary),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(color: teal, shape: BoxShape.circle),
+                              child: const Icon(Icons.send, color: Colors.white, size: 18),
+                            ),
                           ),
                   ],
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+
+          const Divider(height: 1, color: Color(0xFF1A1A2E)),
+
+          // Feed
           StreamBuilder<List<Map<String, dynamic>>>(
             stream: Supabase.instance.client
                 .from('posts')
@@ -199,17 +260,24 @@ class _FeedPageState extends State<FeedPage> {
                 .order('created_at', ascending: false),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Expanded(
+                  child: Center(child: CircularProgressIndicator(color: teal)),
+                );
               }
-              if (snapshot.hasError) return Center(child: Text('Erro: ${snapshot.error}'));
+              if (snapshot.hasError) {
+                return Expanded(child: Center(child: Text('Erro: ${snapshot.error}', style: const TextStyle(color: Colors.white))));
+              }
               final posts = snapshot.data;
               if (posts == null || posts.isEmpty) {
                 return const Expanded(
-                  child: Center(child: Text('Nenhum post ainda. Seja o primeiro!')),
+                  child: Center(
+                    child: Text('Nenhum post ainda. Seja o primeiro!', style: TextStyle(color: Colors.grey)),
+                  ),
                 );
               }
               return Expanded(
                 child: ListView.builder(
+                  padding: const EdgeInsets.only(top: 8, bottom: 16),
                   itemCount: posts.length,
                   itemBuilder: (context, index) {
                     final post = posts[index];
@@ -239,12 +307,12 @@ class SearchPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Buscar'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: const Color(0xFF00B4B4),
+        title: const Text('Buscar', style: TextStyle(color: Colors.white)),
       ),
-      body: const Center(child: Text('Busca em breve')),
+      body: const Center(child: Text('Busca em breve', style: TextStyle(color: Colors.grey))),
     );
   }
 }
@@ -256,12 +324,12 @@ class NotificationsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Notificações'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: const Color(0xFF00B4B4),
+        title: const Text('Notificações', style: TextStyle(color: Colors.white)),
       ),
-      body: const Center(child: Text('Notificações em breve')),
+      body: const Center(child: Text('Notificações em breve', style: TextStyle(color: Colors.grey))),
     );
   }
 }
