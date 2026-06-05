@@ -5,75 +5,54 @@ import '../components/textfield.dart';
 import '../helper/helper_functions.dart';
 
 class RegisterPage extends StatefulWidget {
-  final void Function()? onTap;
-
-  const RegisterPage({super.key, required this.onTap});
+  const RegisterPage({super.key});
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  // text controllers
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
 
-  // Register method
   void registerUser() async {
-    // show loading circle
     showDialog(
       context: context,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    // make sure passwords match
     if (passwordController.text != confirmPasswordController.text) {
-      // pop the loading circle
       Navigator.pop(context);
+      displayMessageToUser("As senhas não coincidem!", context);
+      return;
+    }
 
-      // show error message to user
-      displayMessageToUser("Passwords don't match!", context);
-    } else {
-      // try creating the user's account
-      try {
-        final response = await Supabase.instance.client.auth.signUp(
-          email: emailController.text,
-          password: passwordController.text,
-          data: {'username': usernameController.text},
-        );
+    try {
+      final response = await Supabase.instance.client.auth.signUp(
+        email: emailController.text,
+        password: passwordController.text,
+        data: {'username': usernameController.text},
+      );
 
-        if (response.user == null) {
-          throw Exception("Registration failed");
-        }
-
-        // Add user to the users table
-        await Supabase.instance.client.from('users').insert({
-          'id': response.user!.id,
-          'username': usernameController.text,
-          'email': emailController.text,
-        });
-
-        // pop loading circle
-        if (mounted) Navigator.pop(context);
-
-        // Navigate to login page and display success message
-        if (mounted) {
-          displayMessageToUser(
-            "Registration successful! Check your email for the verification link.",
-            context,
-          );
-          widget.onTap?.call();
-        }
-      } catch (e) {
-        // pop loading circle
-        if (mounted) Navigator.pop(context);
-
-        // display error message to user
-        if (mounted) displayMessageToUser(e.toString(), context);
+      if (response.user == null) {
+        throw Exception("Cadastro falhou.");
       }
+
+      await Supabase.instance.client.from('profiles').insert({
+        'id': response.user!.id,
+        'username': usernameController.text,
+      });
+
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        displayMessageToUser("Cadastro realizado! Verifique seu email.", context);
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) displayMessageToUser(e.toString(), context);
     }
   }
 
@@ -84,96 +63,84 @@ class _RegisterPageState extends State<RegisterPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(25.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // logo
-                    Icon(
-                      Icons.person_rounded,
-                      size: 80,
-                      color: Theme.of(context).colorScheme.inversePrimary,
+            child: Padding(
+              padding: const EdgeInsets.all(25.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+
+                  Icon(
+                    Icons.circle,
+                    size: 80,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  const Text(
+                    "Circle",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
 
-                    const SizedBox(height: 25),
+                  const SizedBox(height: 50),
 
-                    // app name
-                    const Text(
-                      "A I T O X R  U S E R",
-                      style: TextStyle(fontSize: 20),
-                    ),
+                  MyTextfield(
+                    hintText: "Nome de usuário",
+                    obscureText: false,
+                    controller: usernameController,
+                  ),
 
-                    const SizedBox(height: 50),
+                  const SizedBox(height: 10),
 
-                    // username textfield
-                    MyTextfield(
-                      hintText: "Username",
-                      obscureText: false,
-                      controller: usernameController,
-                    ),
+                  MyTextfield(
+                    hintText: "Email",
+                    obscureText: false,
+                    controller: emailController,
+                  ),
 
-                    const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                    // textfield
-                    MyTextfield(
-                      hintText: "Email",
-                      obscureText: false,
-                      controller: emailController,
-                    ),
+                  MyTextfield(
+                    hintText: "Senha",
+                    obscureText: true,
+                    controller: passwordController,
+                  ),
 
-                    const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                    // password textfield
-                    MyTextfield(
-                      hintText: "Password",
-                      obscureText: true,
-                      controller: passwordController,
-                    ),
+                  MyTextfield(
+                    hintText: "Confirmar senha",
+                    obscureText: true,
+                    controller: confirmPasswordController,
+                  ),
 
-                    const SizedBox(height: 10),
+                  const SizedBox(height: 25),
 
-                    // confirm password textfield
-                    MyTextfield(
-                      hintText: "Confirm Password",
-                      obscureText: true,
-                      controller: confirmPasswordController,
-                    ),
+                  MyButton(text: "Cadastrar", onTap: registerUser),
 
-                    const SizedBox(height: 10),
+                  const SizedBox(height: 25),
 
-                    const SizedBox(height: 25),
-
-                    // register button
-                    MyButton(text: "Register", onTap: registerUser),
-
-                    const SizedBox(height: 25),
-
-                    // don't have an account? Register here
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Already have an account?",
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.inversePrimary,
-                          ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Já tem conta?"),
+                      const SizedBox(width: 5),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: const Text(
+                          "Entrar",
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        const SizedBox(width: 5),
-                        GestureDetector(
-                          onTap: widget.onTap,
-                          child: const Text(
-                            "Login Here",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
 
-                    const SizedBox(height: 50),
-                  ],
-                ),
+                  const SizedBox(height: 50),
+                ],
               ),
             ),
           ),
